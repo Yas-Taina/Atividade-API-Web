@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokedex</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Pokedex</h1>
+    <h2>João Alberto François</h2>
+    <h2>Yasmin Tainá da Silva</h2>
+
+    <form id="pokemonForm">
+        <input type="hidden" id="pokemonId" />
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" required />
+        <label for="tipo">Tipo:</label>
+        <input type="text" id="tipo" required />
+        <label for="nivel">Nível:</label>
+        <input type="number" id="nivel" required min="1" />
+        <button type="submit">Salvar</button>
+    </form>
+
+    <table id="pokemonTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Nível</th>
+                <th>Editar ou Deletar?</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchPokemons() {
+            try {
+                const response = await fetch('http://localhost:3000/api/pokemons');
+                const pokemons = await response.json();
+                const tableBody = document.getElementById('pokemonTable').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = '';
+
+                pokemons.forEach(pokemon => {
+                    const row = tableBody.insertRow();
+
+                    row.insertCell(0).textContent = pokemon.id;
+                    row.insertCell(1).textContent = pokemon.nome;
+                    row.insertCell(2).textContent = pokemon.tipo;
+                    row.insertCell(3).textContent = pokemon.nivel;
+
+                    const actionsCell = row.insertCell(4);
+                    const editButton = document.createElement('button');
+                    editButton.textContent = 'Editar';
+                    editButton.onclick = () => loadPokemonToForm(pokemon);
+                    actionsCell.appendChild(editButton);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Deletar';
+                    deleteButton.onclick = () => deletePokemon(pokemon.id);
+                    actionsCell.appendChild(deleteButton);
+                });
+            } catch (error) {
+                console.error('Erro ao buscar Pokémon:', error);
+            }
+        }
+
+        function loadPokemonToForm(pokemon) {
+            document.getElementById('pokemonId').value = pokemon.id;
+            document.getElementById('nome').value = pokemon.nome;
+            document.getElementById('tipo').value = pokemon.tipo;
+            document.getElementById('nivel').value = pokemon.nivel;
+        }
+
+        async function savePokemon(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('pokemonId').value;
+            const nome = document.getElementById('nome').value;
+            const tipo = document.getElementById('tipo').value;
+            const nivel = parseInt(document.getElementById('nivel').value);
+
+            const pokemonData = { nome, tipo, nivel };
+
+            try {
+                let response;
+                if (id) {
+                    response = await fetch(`http://localhost:3000/api/pokemons/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pokemonData)
+                    });
+                } else {
+                    response = await fetch('http://localhost:3000/api/pokemons', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pokemonData)
+                    });
+                }
+
+                if (!response.ok) throw new Error('Erro ao salvar Pokémon');
+
+                document.getElementById('pokemonForm').reset();
+                fetchPokemons();
+            } catch (error) {
+                console.error('Erro ao salvar Pokémon:', error);
+            }
+        }
+
+        async function deletePokemon(id) {
+            try {
+                const response = await fetch(`http://localhost:3000/api/pokemons/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Erro ao deletar Pokémon');
+
+                fetchPokemons();
+            } catch (error) {
+                console.error('Erro ao deletar Pokémon:', error);
+            }
+        }
+
+        document.getElementById('pokemonForm').addEventListener('submit', savePokemon);
+
+        window.onload = fetchPokemons;
+    </script>
+
+</body>
+</html>
